@@ -82,6 +82,44 @@
                             <span class="text-danger text-sm">{{ $message }}</span>
                         @enderror
                     </div>
+                    <!-- Source of News URL -->
+                    <div class="mb-4">
+                        <label for="source_news_url" class="block text-base font-bold mb-2" style="color:#000 !important;">
+                            Source of News URL
+                        </label>
+                        <input 
+                            id="source_news_url" 
+                            type="url" 
+                            name="source_news_url" 
+                            class="form-input w-full text-black" 
+                            style="color:#000 !important;" 
+                            value="{{ old('source_news_url') }}" 
+                            placeholder="https://example.com/news-source"
+                        >
+                        @error('source_news_url')
+                            <span class="text-danger text-sm">{{ $message }}</span>
+                        @enderror
+                        <small class="text-gray-500">Enter the original link where the news was found.</small>
+                    </div>
+
+                    <!-- Date/Time Encountered -->
+                    <div class="mb-4">
+                        <label for="date_time_encountered" class="block text-base font-bold mb-2" style="color:#000 !important;">
+                            Date/Time Encountered
+                        </label>
+                        <input 
+                            id="date_time_encountered" 
+                            type="datetime-local" 
+                            name="date_time_encountered" 
+                            class="form-input w-full text-black" 
+                            style="color:#000 !important;" 
+                            value="{{ old('date_time_encountered') }}"
+                        >
+                        @error('date_time_encountered')
+                            <span class="text-danger text-sm">{{ $message }}</span>
+                        @enderror
+                        <small class="text-gray-500">Select when you encountered or saw the news.</small>
+                    </div>
                     <!-- Attachment -->
                     <div class="mb-4">
                         <label for="attachment" class="block text-base font-bold mb-2" style="color:#000 !important;">Attachment</label>
