@@ -402,6 +402,52 @@
                                 <span
                                     style="color:#6b7280;">{{ $inquiry->inquiry_Created_At ? \Carbon\Carbon::parse($inquiry->inquiry_Created_At)->format('d/m/Y H:i') : 'N/A' }}</span>
                             </div>
+                            <!-- Timeline Visualization Feature -->
+                            <div class="mb-4">
+                                <h5 class="font-bold text-gray-800 mb-3">
+                                    <i class="fas fa-stream mr-2"></i>
+                                    Inquiry Timeline
+                                </h5>
+
+                                <div class="timeline-container">
+
+                                    <div class="timeline-item">
+                                        <div class="timeline-dot bg-green-500"></div>
+                                        <div class="timeline-content">
+                                            <strong>Inquiry Submitted</strong>
+                                            <div class="text-sm text-gray-600">
+                                                {{ $inquiry->inquiry_Created_At ? \Carbon\Carbon::parse($inquiry->inquiry_Created_At)->format('d M Y H:i') : 'N/A' }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if($agencyInfo)
+                                    <div class="timeline-item">
+                                        <div class="timeline-dot bg-blue-500"></div>
+                                        <div class="timeline-content">
+                                            <strong>Assigned to Agency</strong>
+                                            <div class="text-sm text-gray-600">
+                                                {{ $agencyInfo['agency_name'] }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ \Carbon\Carbon::parse($agencyInfo['assigned_date'])->format('d M Y') }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    <div class="timeline-item">
+                                        <div class="timeline-dot bg-yellow-500"></div>
+                                        <div class="timeline-content">
+                                            <strong>Current Status</strong>
+                                            <div class="text-sm text-gray-600">
+                                                {{ ucfirst(str_replace('_', ' ', $inquiry->inquiry_Status)) }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
 
                             {{-- Agency Assignment Information in Modal --}}
                             @php
@@ -533,6 +579,40 @@
 
     <!-- Modal Script -->
     <style>
+        .timeline-container {
+            position: relative;
+            margin-left: 8px;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 18px;
+            width: 2px;
+            height: calc(100% - 5px);
+            background: #d1d5db;
+        }
+
+        .timeline-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
         /* Ensure modal buttons and text are always visible on light backgrounds */
         .modal-override-btn,
         .modal-override-btn.btn,
