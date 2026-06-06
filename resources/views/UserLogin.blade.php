@@ -90,32 +90,51 @@
         <form method="POST" action="{{ route('login') }}" class="space-y-6" novalidate>
             @csrf
             <input type="hidden" name="type" value="{{ $type }}">
+          @if (!empty($lockoutMessage))
+    <div id="lockout-wrapper"
+         data-lockout-seconds="{{ $lockoutSeconds ?? 0 }}"
+         style="display: block !important; opacity: 1 !important; visibility: visible !important;">
+        <div id="persistent-lockout-message"
+             class="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm mb-4"
+             style="display: block !important; opacity: 1 !important; visibility: visible !important;">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle mr-2 mt-1" aria-hidden="true"></i>
+                <span id="lockout-message-text">{{ $lockoutMessage }}</span>
+            </div>
+        </div>
+    </div>
+@endif
 
             <!-- Email Field -->
-            <div>
-                <label for="email" class="form-label">
-                    <i class="fas fa-envelope mr-2 text-gray-400" aria-hidden="true"></i>
-                    Email Address
-                </label>
-                <input type="email"
-                       id="email"
-                       name="email"
-                       value="{{ old('email') }}"
-                       class="form-input @error('email') error @enderror"
-                       placeholder="Enter your email address"
-                       required
-                       autocomplete="email"
-                       aria-describedby="@error('email') email-error @enderror email-help">
-                @error('email')
-                    <div id="email-error" class="form-error" role="alert">
-                        <i class="fas fa-exclamation-circle mr-1" aria-hidden="true"></i>
-                        {{ $message }}
-                    </div>
-                @enderror
-                <div id="email-help" class="form-help">
-                    We'll never share your email with anyone else.
-                </div>
+<div>
+    <label for="email" class="form-label">
+        <i class="fas fa-envelope mr-2 text-gray-400" aria-hidden="true"></i>
+        Email Address
+    </label>
+
+    <input type="email"
+           id="email"
+           name="email"
+           value="{{ old('email', $lockoutEmail ?? '') }}"
+           class="form-input @error('email') error @enderror"
+           placeholder="Enter your email address"
+           required
+           autocomplete="email"
+           aria-describedby="@error('email') email-error @enderror email-help">
+
+    @if (empty($isLoginLocked))
+        @error('email')
+            <div id="email-error" class="form-error" role="alert">
+                <i class="fas fa-exclamation-circle mr-1" aria-hidden="true"></i>
+                {{ $message }}
             </div>
+        @enderror
+    @endif
+
+    <div id="email-help" class="form-help">
+        We'll never share your email with anyone else.
+    </div>
+</div>
 
             <!-- Password Field -->
             <div>
@@ -169,17 +188,20 @@
 
             <!-- Submit Button -->
             <div>
-                <button type="submit"
-                        class="btn btn-primary w-full"
-                        aria-describedby="login-help">
-                    <i class="fas fa-sign-in-alt mr-2" aria-hidden="true"></i>
-                    Sign In
-                    <span class="loading-spinner ml-2 hidden" id="login-spinner" aria-hidden="true"></span>
-                </button>
-                <div id="login-help" class="form-help text-center mt-2">
-                    By signing in, you agree to our terms of service and privacy policy.
-                </div>
-            </div>
+    <button type="submit"
+            id="login-button"
+            class="btn btn-primary w-full @if (!empty($isLoginLocked)) opacity-50 cursor-not-allowed @endif"
+            aria-describedby="login-help"
+            @if (!empty($isLoginLocked)) disabled @endif>
+        <i class="fas fa-sign-in-alt mr-2" aria-hidden="true"></i>
+        Sign In
+        <span class="loading-spinner ml-2 hidden" id="login-spinner" aria-hidden="true"></span>
+    </button>
+
+    <div id="login-help" class="form-help text-center mt-2">
+        By signing in, you agree to our terms of service and privacy policy.
+    </div>
+</div>
         </form>
     @endif
 @endsection
@@ -225,23 +247,60 @@
         }
     }
 
-    // Form submission with loading state
-    document.querySelector('form')?.addEventListener('submit', function() {
-        const submitButton = this.querySelector('button[type="submit"]');
-        const spinner = document.getElementById('login-spinner');
+    document.addEventListener('DOMContentLoaded', function () {
+        const lockoutWrapper = document.getElementById('lockout-wrapper');
+        const lockoutMessageText = document.getElementById('lockout-message-text');
+        const loginButton = document.getElementById('login-button');
 
-        if (submitButton && spinner) {
-            submitButton.disabled = true;
-            spinner.classList.remove('hidden');
-            submitButton.querySelector('span:not(.loading-spinner)').textContent = 'Signing In...';
-        }
-    });
+        if (lockoutWrapper && lockoutMessageText) {
+            let remainingSeconds = parseInt(lockoutWrapper.dataset.lockoutSeconds || '0');
 
-    // Enhanced keyboard navigation
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && e.target.classList.contains('login-type-btn')) {
-            e.target.click();
+            if (loginButton) {
+                loginButton.disabled = true;
+            }
+
+            const keepVisible = function () {
+                lockoutWrapper.style.display = 'block';
+                lockoutWrapper.style.opacity = '1';
+                lockoutWrapper.style.visibility = 'visible';
+
+                const alertBox = document.getElementById('persistent-lockout-message');
+                if (alertBox) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.opacity = '1';
+                    alertBox.style.visibility = 'visible';
+                }
+            };
+
+            keepVisible();
+
+            const timer = setInterval(function () {
+                keepVisible();
+
+                if (remainingSeconds <= 0) {
+                    clearInterval(timer);
+
+                    lockoutMessageText.textContent = 'You can try logging in again now.';
+
+                    if (loginButton) {
+                        loginButton.disabled = false;
+                    }
+
+                    return;
+                }
+
+                const minutes = Math.ceil(remainingSeconds / 60);
+                lockoutMessageText.textContent = `Login temporarily locked. Try again in ${minutes} minute(s).`;
+
+                remainingSeconds--;
+            }, 1000);
         }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.classList.contains('login-type-btn')) {
+                e.target.click();
+            }
+        });
     });
 </script>
 @endpush
