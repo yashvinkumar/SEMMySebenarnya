@@ -449,6 +449,26 @@
                                 </div>
                             </div>
 
+                            <div class="mb-4">
+                                <span class="font-bold" style="color:#000 !important;">Source of News URL:</span>
+                                <span style="color:#6b7280;">
+                                    @if($inquiry->source_news_url)
+                                        <a href="{{ $inquiry->source_news_url }}" target="_blank" style="color:#2563eb; text-decoration: underline;">
+                                            {{ $inquiry->source_news_url }}
+                                        </a>
+                                    @else
+                                        Not provided
+                                    @endif
+                                </span>
+                            </div>
+
+                            <div class="mb-4">
+                                <span class="font-bold" style="color:#000 !important;">Date/Time Encountered:</span>
+                                <span style="color:#6b7280;">
+                                    {{ $inquiry->date_time_encountered ? \Carbon\Carbon::parse($inquiry->date_time_encountered)->format('d/m/Y H:i') : 'Not provided' }}
+                                </span>
+                            </div>
+
                             {{-- Agency Assignment Information in Modal --}}
                             @php
                                 $agencyInfo = $inquiry->getAgencyAssignmentInfo();

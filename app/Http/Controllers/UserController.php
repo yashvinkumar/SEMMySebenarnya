@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rules\Password;
@@ -20,6 +22,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Notifications\AgencyCredentialsNotification;
+
 
 class UserController extends Controller
 {
@@ -61,69 +64,180 @@ class UserController extends Controller
         return redirect()->route('login', ['type' => 'public'])
             ->with('success', 'Registration successful! Please check your email to verify your account.');
     }
+/**
+ * Show the login form
+ */
+public function showLoginForm(Request $request)
+{
+    $type = $request->get('type', 'public');
 
-    /**
-     * Show the login form
-     */
-    public function showLoginForm(Request $request)
-    {
-        $type = $request->get('type', 'public');
-        return view('UserLogin', compact('type'));
+    $lockoutMessage = null;
+    $lockoutEmail = null;
+    $lockoutSeconds = 0;
+    $isLoginLocked = false;
+
+    $sessionLockoutEmail = $request->session()->get('login_lockout_email');
+    $sessionLockoutType = $request->session()->get('login_lockout_type');
+
+    if ($sessionLockoutEmail && $sessionLockoutType === $type) {
+        $throttleKey = Str::lower($sessionLockoutEmail) . '|' . $type . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $lockoutSeconds = RateLimiter::availableIn($throttleKey);
+            $minutes = ceil($lockoutSeconds / 60);
+
+            $lockoutEmail = $sessionLockoutEmail;
+            $isLoginLocked = true;
+            $lockoutMessage = "Login temporarily locked. Try again in {$minutes} minute(s).";
+        } else {
+            $request->session()->forget([
+                'login_lockout_email',
+                'login_lockout_type',
+            ]);
+        }
     }
 
-    /**
-     * Handle login request
+    return view('UserLogin', compact(
+        'type',
+        'lockoutMessage',
+        'lockoutEmail',
+        'lockoutSeconds',
+        'isLoginLocked'
+    ));
+}
+
+/**
+ * Handle login request
+ */
+/**
+ * Handle login request
+ */
+public function login(LoginRequest $request)
+{
+    $credentials = $request->only('email', 'password');
+    $type = $request->type;
+    $guard = $type;
+
+    /*
+     * Preventive Maintenance:
+     * Add login attempt limit with progressive temporary lockout
+     * to reduce brute-force login risk for public users, MCMC staff, and agency staff.
      */
-    public function login(LoginRequest $request)
-    {
-        $credentials = $request->only('email', 'password');
-        $type = $request->type;
-        $guard = $type;
+    $maxAttempts = 5;
+    $throttleKey = Str::lower($credentials['email']) . '|' . $type . '|' . $request->ip();
+    $lockLevelKey = $throttleKey . '|lock_level';
 
-        // Find user by email and type (now includes agencies)
-        $user = UserRecord::where('email', $credentials['email'])
-            ->where('user_type', $type)
-            ->first();
+    // Cooldown stages: 1 minute, 2 minutes, 5 minutes, 10 minutes
+    $cooldownStages = [60, 120, 300, 600];
 
-        if (!$user) {
-            throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
-            ]);
-        }
+    $lockLevel = Cache::get($lockLevelKey, 0);
+    $cooldownSeconds = $cooldownStages[min($lockLevel, count($cooldownStages) - 1)];
 
-        // Password check
-        if (Hash::check($credentials['password'], $user->password)) {
-            // Clear other guard sessions
-            $this->clearOtherGuardSessions($request, $guard);
+    // If user is already locked out
+    if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
+        $seconds = RateLimiter::availableIn($throttleKey);
+        $minutes = ceil($seconds / 60);
 
-            Auth::guard($guard)->login($user, $request->filled('remember'));
-            $request->session()->regenerate();
-
-            // Log successful login for debugging
-            Log::info("User logged in successfully", [
-                'user_id' => $user->id,
-                'user_type' => $type,
-                'guard' => $guard
-            ]);
-
-            // Redirect based on user type
-            switch ($type) {
-                case 'public':
-                    return redirect()->route('public.dashboard');
-                case 'mcmc':
-                    return redirect()->route('mcmc.dashboard');
-                case 'agency':
-                    return redirect()->route('agency.dashboard');
-                default:
-                    return redirect()->route('home');
-            }
-        }
+        $request->session()->put('login_lockout_email', $credentials['email']);
+        $request->session()->put('login_lockout_type', $type);
 
         throw ValidationException::withMessages([
-            'email' => __('auth.failed'),
+            'email' => "Login temporarily locked. Try again in {$minutes} minute(s).",
         ]);
     }
 
+    // Find user by email and type
+    $user = UserRecord::where('email', $credentials['email'])
+        ->where('user_type', $type)
+        ->first();
+
+    // If email or user type is not found
+    if (!$user) {
+        RateLimiter::hit($throttleKey, $cooldownSeconds);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
+            Cache::put(
+                $lockLevelKey,
+                min($lockLevel + 1, count($cooldownStages) - 1),
+                now()->addHours(1)
+            );
+
+            $minutes = ceil($cooldownSeconds / 60);
+
+            $request->session()->put('login_lockout_email', $credentials['email']);
+            $request->session()->put('login_lockout_type', $type);
+
+            throw ValidationException::withMessages([
+                'email' => "Login temporarily locked. Try again in {$minutes} minute(s).",
+            ]);
+        }
+
+        $remainingAttempts = RateLimiter::remaining($throttleKey, $maxAttempts);
+
+        throw ValidationException::withMessages([
+            'email' => "These credentials do not match our records. {$remainingAttempts} attempt(s) left.",
+        ]);
+    }
+
+    // Password check
+    if (Hash::check($credentials['password'], $user->password)) {
+        RateLimiter::clear($throttleKey);
+        Cache::forget($lockLevelKey);
+
+        $request->session()->forget([
+            'login_lockout_email',
+            'login_lockout_type',
+        ]);
+
+        $this->clearOtherGuardSessions($request, $guard);
+
+        Auth::guard($guard)->login($user, $request->filled('remember'));
+        $request->session()->regenerate();
+
+        Log::info("User logged in successfully", [
+            'user_id' => $user->id,
+            'user_type' => $type,
+            'guard' => $guard
+        ]);
+
+        switch ($type) {
+            case 'public':
+                return redirect()->route('public.dashboard');
+            case 'mcmc':
+                return redirect()->route('mcmc.dashboard');
+            case 'agency':
+                return redirect()->route('agency.dashboard');
+            default:
+                return redirect()->route('home');
+        }
+    }
+
+    // If password is wrong
+    RateLimiter::hit($throttleKey, $cooldownSeconds);
+
+    if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
+        Cache::put(
+            $lockLevelKey,
+            min($lockLevel + 1, count($cooldownStages) - 1),
+            now()->addHours(1)
+        );
+
+        $minutes = ceil($cooldownSeconds / 60);
+
+        $request->session()->put('login_lockout_email', $credentials['email']);
+        $request->session()->put('login_lockout_type', $type);
+
+        throw ValidationException::withMessages([
+            'email' => "Login temporarily locked. Try again in {$minutes} minute(s).",
+        ]);
+    }
+
+    $remainingAttempts = RateLimiter::remaining($throttleKey, $maxAttempts);
+
+    throw ValidationException::withMessages([
+        'email' => "These credentials do not match our records. {$remainingAttempts} attempt(s) left.",
+    ]);
+}
     /**
      * Handle agency login
      */

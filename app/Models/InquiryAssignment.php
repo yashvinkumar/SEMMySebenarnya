@@ -21,12 +21,15 @@ class InquiryAssignment extends Model
         'assignment_Comments',
         'rejection_Reason',
         'assigned_By',
-        'completed_At'
+        'completed_At',
+        'due_date',
+        'sla_status'
     ];
 
     protected $casts = [
         'assignment_Date' => 'datetime',
         'completed_At' => 'datetime',
+        'due_date' => 'datetime',
     ];
 
     /**
@@ -39,6 +42,23 @@ class InquiryAssignment extends Model
         'rejected' => 'Rejected',
         'reassigned' => 'Reassigned'
     ];
+
+    /**
+     * The "booted" method of the model.
+     * Automatically set due_date when an assignment is created.
+     * SLA period: 7 days from assignment_Date.
+     */
+    protected static function booted()
+    {
+        static::creating(function ($assignment) {
+            if ($assignment->assignment_Date && !$assignment->due_date) {
+                $assignment->due_date = $assignment->assignment_Date->copy()->addDays(7);
+            }
+            if (!$assignment->sla_status) {
+                $assignment->sla_status = 'On Time';
+            }
+        });
+    }
 
     /**
      * Get the agency that this assignment belongs to
@@ -162,5 +182,50 @@ class InquiryAssignment extends Model
     public function progressUpdates()
     {
         return $this->hasMany(InquiryProgress::class, 'assignment_ID', 'assignment_ID');
+    }
+
+    /**
+     * Get the computed SLA status.
+     *
+     * Business rule:
+     * - If assignment_Status is 'completed' → 'On Time'
+     * - If current date > due_date AND assignment is not completed → 'Overdue'
+     * - Otherwise → 'On Time'
+     */
+    public function getSlaStatusAttribute($value)
+    {
+        // If assignment is completed, always return On Time
+        if ($this->assignment_Status === 'completed') {
+            return 'On Time';
+        }
+
+        // If we have a due_date and it's in the past, it's overdue
+        if ($this->due_date && now()->gt($this->due_date)) {
+            return 'Overdue';
+        }
+
+        // Otherwise, use the stored value or default
+        return $value ?: 'On Time';
+    }
+
+    /**
+     * Scope to get only overdue assignments.
+     */
+    public function scopeOverdue($query)
+    {
+        return $query->where('due_date', '<', now())
+                     ->where('assignment_Status', '!=', 'completed');
+    }
+
+    /**
+     * Scope to get only on-time assignments.
+     */
+    public function scopeOnTime($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('due_date')
+              ->orWhere('due_date', '>=', now())
+              ->orWhere('assignment_Status', 'completed');
+        });
     }
 }

@@ -186,6 +186,8 @@ class InquirySubmissionController extends Controller
             'inquiry_Title' => 'required|string|max:255',
             'inquiry_Description' => 'required|string',
             'inquiry_Category' => 'required|string',
+            'source_news_url' => 'nullable|url|max:255',
+            'date_time_encountered' => 'nullable|date',
             'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
         ]);
 
@@ -201,6 +203,8 @@ class InquirySubmissionController extends Controller
             'inquiry_Title' => $request->inquiry_Title,
             'inquiry_Description' => $request->inquiry_Description,
             'inquiry_Category' => $request->inquiry_Category,
+            'source_news_url' => $request->source_news_url,
+            'date_time_encountered' => $request->date_time_encountered,
             'inquiry_Attachment_URL' => $attachmentUrl,
             'inquiry_Status' => 'pending',
             'inquiry_Created_At' => now(),
@@ -246,10 +250,12 @@ class InquirySubmissionController extends Controller
         }
 
         $request->validate([
-            'inquiry_Title' => 'required|string|max:255',
-            'inquiry_Description' => 'required|string',
-            'inquiry_Category' => 'required|string',
-            'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
+        'inquiry_Title' => 'required|string|max:255',
+        'inquiry_Description' => 'required|string',
+        'inquiry_Category' => 'required|string',
+        'source_news_url' => 'nullable|url|max:255',
+        'date_time_encountered' => 'nullable|date',
+        'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
         ]);
 
         $attachmentUrl = $inquiry->inquiry_Attachment_URL;
@@ -268,6 +274,8 @@ class InquirySubmissionController extends Controller
             'inquiry_Title' => $request->inquiry_Title,
             'inquiry_Description' => $request->inquiry_Description,
             'inquiry_Category' => $request->inquiry_Category,
+            'source_news_url' => $request->source_news_url,
+            'date_time_encountered' => $request->date_time_encountered,
             'inquiry_Attachment_URL' => $attachmentUrl,
         ]);
 
@@ -347,7 +355,9 @@ class InquirySubmissionController extends Controller
      */
     public function mcmcInquiryList(Request $request)
     {
-        $query = InquirySubmissionRecord::with(['user', 'assignments.agency']);
+        $query = InquirySubmissionRecord::with(['user', 'assignments' => function ($q) {
+            $q->with('agency');
+        }]);
 
         // Apply filters
         if ($request->filled('search')) {
@@ -396,8 +406,16 @@ class InquirySubmissionController extends Controller
      */
     public function showApprovalForm($id)
     {
-        $inquiry = InquirySubmissionRecord::with('user')->findOrFail($id);
-        return view('Inquiry Submission.MCMC.InquiryApproval', compact('inquiry'));
+        $inquiry = InquirySubmissionRecord::with([
+            'user',
+            'assignments.agency',
+            'assignments.assignedByStaff'
+        ])->findOrFail($id);
+
+        // Get the current active assignment for SLA info
+        $currentAssignment = $inquiry->currentAssignment();
+
+        return view('Inquiry Submission.MCMC.InquiryApproval', compact('inquiry', 'currentAssignment'));
     }
 
     /**
@@ -419,6 +437,15 @@ class InquirySubmissionController extends Controller
         $inquiry->update([
             'inquiry_Status' => $request->status,
         ]);
+
+        // If marking as completed, update the assignment's SLA status to "On Time"
+        if ($request->status === 'completed') {
+            $currentAssignment = $inquiry->currentAssignment();
+            if ($currentAssignment) {
+                $currentAssignment->sla_status = 'On Time';
+                $currentAssignment->save();
+            }
+        }
 
         return redirect()->route('mcmc.inquiries.list')->with('success', 'Inquiry status updated successfully!');
     }

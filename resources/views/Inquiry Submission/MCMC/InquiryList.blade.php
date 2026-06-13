@@ -1,3 +1,4 @@
+
 @extends('layouts.dashboard')
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/dashboard-theme.css') }}">
@@ -231,6 +232,25 @@
                                             <span class="text-orange-600">Not Assigned</span>
                                         </div>
                                     @endif
+                                    {{-- SLA: Due Date & Status --}}
+                                    @php
+                                        $latestAssignment = $inquiry->currentAssignment();
+                                        $dueDate = $latestAssignment ? $latestAssignment->due_date : null;
+                                        $slaStatus = $latestAssignment ? $latestAssignment->sla_status : null;
+                                    @endphp
+                                    @if ($latestAssignment)
+                                        <div class="flex items-center mt-1">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            <span class="text-gray-600">Due:
+                                                {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d/m/Y') : 'N/A' }}</span>
+                                            &nbsp;
+                                            @if ($slaStatus === 'Overdue')
+                                                <span class="badge bg-danger">Overdue</span>
+                                            @else
+                                                <span class="badge bg-success">On Time</span>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="flex flex-row items-end gap-3 ml-4">
@@ -286,6 +306,25 @@
                             <div class="mb-4"><span class="font-bold" style="color:#000 !important;">Submitted
                                     On:</span> <span
                                     style="color:#6b7280;">{{ $inquiry->inquiry_Created_At ? \Carbon\Carbon::parse($inquiry->inquiry_Created_At)->format('d/m/Y H:i') : 'N/A' }}</span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="font-bold" style="color:#000 !important;">Source of News URL:</span>
+                                <span style="color:#6b7280;">
+                                    @if($inquiry->source_news_url)
+                                        <a href="{{ $inquiry->source_news_url }}" target="_blank" style="color:#2563eb; text-decoration: underline;">
+                                            {{ $inquiry->source_news_url }}
+                                        </a>
+                                    @else
+                                        Not provided
+                                    @endif
+                                </span>
+                            </div>
+
+                            <div class="mb-2">
+                                <span class="font-bold" style="color:#000 !important;">Date/Time Encountered:</span>
+                                <span style="color:#6b7280;">
+                                    {{ $inquiry->date_time_encountered ? \Carbon\Carbon::parse($inquiry->date_time_encountered)->format('d/m/Y H:i') : 'Not provided' }}
+                                </span>
                             </div>
                             <div class="mb-4"><span class="font-bold"
                                     style="color:#000 !important;">Description:</span> <span
