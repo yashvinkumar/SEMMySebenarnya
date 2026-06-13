@@ -20,6 +20,8 @@ class InquirySubmissionRecord extends Model
         'inquiry_Title',
         'inquiry_Description',
         'inquiry_Category',
+        'source_news_url',
+        'date_time_encountered',
         'inquiry_Attachment_URL',
         'inquiry_Status',
         'inquiry_Created_At'

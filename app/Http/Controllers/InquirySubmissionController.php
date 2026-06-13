@@ -186,6 +186,8 @@ class InquirySubmissionController extends Controller
             'inquiry_Title' => 'required|string|max:255',
             'inquiry_Description' => 'required|string',
             'inquiry_Category' => 'required|string',
+            'source_news_url' => 'nullable|url|max:255',
+            'date_time_encountered' => 'nullable|date',
             'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
         ]);
 
@@ -201,6 +203,8 @@ class InquirySubmissionController extends Controller
             'inquiry_Title' => $request->inquiry_Title,
             'inquiry_Description' => $request->inquiry_Description,
             'inquiry_Category' => $request->inquiry_Category,
+            'source_news_url' => $request->source_news_url,
+            'date_time_encountered' => $request->date_time_encountered,
             'inquiry_Attachment_URL' => $attachmentUrl,
             'inquiry_Status' => 'pending',
             'inquiry_Created_At' => now(),
@@ -246,10 +250,12 @@ class InquirySubmissionController extends Controller
         }
 
         $request->validate([
-            'inquiry_Title' => 'required|string|max:255',
-            'inquiry_Description' => 'required|string',
-            'inquiry_Category' => 'required|string',
-            'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
+        'inquiry_Title' => 'required|string|max:255',
+        'inquiry_Description' => 'required|string',
+        'inquiry_Category' => 'required|string',
+        'source_news_url' => 'nullable|url|max:255',
+        'date_time_encountered' => 'nullable|date',
+        'attachment' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:2048',
         ]);
 
         $attachmentUrl = $inquiry->inquiry_Attachment_URL;
@@ -268,6 +274,8 @@ class InquirySubmissionController extends Controller
             'inquiry_Title' => $request->inquiry_Title,
             'inquiry_Description' => $request->inquiry_Description,
             'inquiry_Category' => $request->inquiry_Category,
+            'source_news_url' => $request->source_news_url,
+            'date_time_encountered' => $request->date_time_encountered,
             'inquiry_Attachment_URL' => $attachmentUrl,
         ]);
 
