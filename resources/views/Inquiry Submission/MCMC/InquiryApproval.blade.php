@@ -68,6 +68,25 @@
                             <span
                                 style="color:#6b7280;">{{ $inquiry->inquiry_Created_At ? \Carbon\Carbon::parse($inquiry->inquiry_Created_At)->format('d/m/Y H:i') : 'N/A' }}</span>
                         </div>
+                        <div class="mb-2">
+                                <span class="font-bold" style="color:#000 !important;">Source of News URL:</span>
+                                <span style="color:#6b7280;">
+                                    @if($inquiry->source_news_url)
+                                        <a href="{{ $inquiry->source_news_url }}" target="_blank" style="color:#2563eb; text-decoration: underline;">
+                                            {{ $inquiry->source_news_url }}
+                                        </a>
+                                    @else
+                                        Not provided
+                                    @endif
+                                </span>
+                            </div>
+
+                            <div class="mb-2">
+                                <span class="font-bold" style="color:#000 !important;">Date/Time Encountered:</span>
+                                <span style="color:#6b7280;">
+                                    {{ $inquiry->date_time_encountered ? \Carbon\Carbon::parse($inquiry->date_time_encountered)->format('d/m/Y H:i') : 'Not provided' }}
+                                </span>
+                            </div>
                         <div class="mb-2"><span class="font-bold" style="color:#000 !important;">Description:</span> <span
                                 style="color:#6b7280;">{{ $inquiry->inquiry_Description }}</span></div>
                         @if ($inquiry->inquiry_Attachment_URL)
