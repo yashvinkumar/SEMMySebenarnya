@@ -157,6 +157,30 @@ class Agency extends Authenticatable
     }
 
     /**
+     * Scope to eager-load count of active assignments (pending + in_progress).
+     */
+    public function scopeWithActiveAssignmentsCount($query)
+    {
+        return $query->withCount(['assignments as active_assignments_count' => function ($q) {
+            $q->whereIn('assignment_Status', ['pending', 'in_progress']);
+        }]);
+    }
+
+    /**
+     * Count of active assignments (pending + in_progress).
+     */
+    public function activeAssignmentsCount(): int
+    {
+        if (array_key_exists('active_assignments_count', $this->attributes)) {
+            return (int) $this->attributes['active_assignments_count'];
+        }
+
+        return $this->assignments()
+            ->whereIn('assignment_Status', ['pending', 'in_progress'])
+            ->count();
+    }
+
+    /**
      * Get the pending assignments count
      */
     public function getPendingAssignmentsCount()

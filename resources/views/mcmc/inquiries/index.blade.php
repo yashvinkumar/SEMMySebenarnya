@@ -142,7 +142,7 @@
                                 <option value="">All Agencies</option>
                                 @foreach($agencies as $agency)
                                     <option value="{{ $agency->agency_ID }}" {{ request('agency_id') == $agency->agency_ID ? 'selected' : '' }}>
-                                        {{ $agency->agency_Name }}
+                                        {{ $agency->agency_Name }} — {{ $agency->activeAssignmentsCount() }} active
                                     </option>
                                 @endforeach
                             </select>
@@ -183,6 +183,25 @@
                 </form>
             </div>
 
+            <!-- Agency Workload Overview -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-building me-2"></i>
+                        Agency Workload
+                    </h5>
+                </div>
+                <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach($agencies as $agency)
+                            <span class="badge bg-light text-dark border px-2 py-2">
+                                @include('mcmc.partials.agency-name-with-workload', ['agency' => $agency])
+                            </span>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
             <!-- Bulk Actions Form -->
             <div id="bulk-actions" class="bulk-actions" style="display: none;">
                 <form method="POST" action="{{ route('mcmc.inquiries.bulk-assign') }}" id="bulkAssignmentForm">
@@ -194,7 +213,7 @@
                                 <option value="">Choose Agency</option>
                                 @foreach($agencies as $agency)
                                     <option value="{{ $agency->agency_ID }}">
-                                        {{ $agency->agency_Name }} ({{ $agency->formatted_agency_type }})
+                                        {{ $agency->agency_Name }} ({{ $agency->formatted_agency_type }}) — {{ $agency->activeAssignmentsCount() }} active
                                     </option>
                                 @endforeach
                             </select>
@@ -385,7 +404,7 @@
                         <select name="agency_id" id="reassign_agency_id" class="form-select" required>
                             <option value="">Select Agency</option>
                             @foreach($agencies as $agency)
-                                <option value="{{ $agency->agency_ID }}">{{ $agency->agency_Name }}</option>
+                                <option value="{{ $agency->agency_ID }}">{{ $agency->agency_Name }} — {{ $agency->activeAssignmentsCount() }} active</option>
                             @endforeach
                         </select>
                     </div>

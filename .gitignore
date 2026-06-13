@@ -1,5 +1,7 @@
 # CakePHP 3
-
+.env
+cursor/
+verify_columns.php
 /vendor/*
 /config/app.php
 

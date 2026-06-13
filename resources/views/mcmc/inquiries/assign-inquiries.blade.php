@@ -270,7 +270,7 @@
                                 <option value="">Choose an agency...</option>
                                 @foreach($agencies as $agency)
                                     <option value="{{ $agency->agency_ID }}">
-                                        {{ $agency->agency_Name }} ({{ $agency->formatted_agency_type }})
+                                        {{ $agency->agency_Name }} ({{ $agency->formatted_agency_type }}) — {{ $agency->activeAssignmentsCount() }} active
                                     </option>
                                 @endforeach
                             </select>
@@ -412,8 +412,7 @@
                                     <option value="">Choose an agency...</option>
                                     @foreach($agencies as $agency)
                                         <option value="{{ $agency->agency_ID }}">
-                                            {{ $agency->agency_Name }}
-                                            <small>({{ $agency->formatted_agency_type }})</small>
+                                            {{ $agency->agency_Name }} — {{ $agency->activeAssignmentsCount() }} active
                                         </option>
                                     @endforeach
                                 </select>
@@ -436,7 +435,7 @@
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-building me-2"></i>
-                            Available Agencies
+                            Agency Workload
                         </h5>
                     </div>
                     <div class="card-body">
@@ -444,7 +443,7 @@
                             @foreach($agencies as $agency)
                                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                                     <div>
-                                        <strong>{{ $agency->agency_Name }}</strong>
+                                        @include('mcmc.partials.agency-name-with-workload', ['agency' => $agency])
                                         <br>
                                         <small class="text-muted">{{ $agency->formatted_agency_type }}</small>
                                     </div>

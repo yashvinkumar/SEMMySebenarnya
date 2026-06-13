@@ -347,7 +347,9 @@ class InquirySubmissionController extends Controller
      */
     public function mcmcInquiryList(Request $request)
     {
-        $query = InquirySubmissionRecord::with(['user', 'assignments.agency']);
+        $query = InquirySubmissionRecord::with(['user', 'assignments' => function ($q) {
+            $q->with('agency');
+        }]);
 
         // Apply filters
         if ($request->filled('search')) {
@@ -396,8 +398,16 @@ class InquirySubmissionController extends Controller
      */
     public function showApprovalForm($id)
     {
-        $inquiry = InquirySubmissionRecord::with('user')->findOrFail($id);
-        return view('Inquiry Submission.MCMC.InquiryApproval', compact('inquiry'));
+        $inquiry = InquirySubmissionRecord::with([
+            'user',
+            'assignments.agency',
+            'assignments.assignedByStaff'
+        ])->findOrFail($id);
+
+        // Get the current active assignment for SLA info
+        $currentAssignment = $inquiry->currentAssignment();
+
+        return view('Inquiry Submission.MCMC.InquiryApproval', compact('inquiry', 'currentAssignment'));
     }
 
     /**
@@ -419,6 +429,15 @@ class InquirySubmissionController extends Controller
         $inquiry->update([
             'inquiry_Status' => $request->status,
         ]);
+
+        // If marking as completed, update the assignment's SLA status to "On Time"
+        if ($request->status === 'completed') {
+            $currentAssignment = $inquiry->currentAssignment();
+            if ($currentAssignment) {
+                $currentAssignment->sla_status = 'On Time';
+                $currentAssignment->save();
+            }
+        }
 
         return redirect()->route('mcmc.inquiries.list')->with('success', 'Inquiry status updated successfully!');
     }

@@ -12,7 +12,8 @@
         <i class="fas fa-tachometer-alt mr-2" aria-hidden="true"></i>
         Dashboard
     </a>
-    <a href="{{ route('mcmc.inquiries.list') }}" class="nav-link active text-primary fw-semibold">
+    <a href="{{ route('mcmc.inquiries.list') }}" class="nav-link 
+     text-primary fw-semibold">
         <i class="fas fa-clipboard-list mr-2" aria-hidden="true"></i>
         Inquiries
     </a>
@@ -101,6 +102,25 @@
                                     <span class="font-bold" style="color:#000 !important;">Assignment Date:</span>
                                     <span
                                         style="color:#6b7280;">{{ $currentAssignment->assignment_Date->format('d/m/Y H:i') }}</span>
+                                </div>
+                                {{-- SLA: Due Date --}}
+                                <div class="mb-2">
+                                    <span class="font-bold" style="color:#000 !important;">Due Date:</span>
+                                    <span style="color:#6b7280;">
+                                        {{ $currentAssignment->due_date ? \Carbon\Carbon::parse($currentAssignment->due_date)->format('d/m/Y H:i') : 'N/A' }}
+                                    </span>
+                                </div>
+                                {{-- SLA: Status Badge --}}
+                                <div class="mb-2">
+                                    <span class="font-bold" style="color:#000 !important;">SLA Status:</span>
+                                    @php
+                                        $slaStatus = $currentAssignment->sla_status;
+                                    @endphp
+                                    @if ($slaStatus === 'Overdue')
+                                        <span class="badge bg-danger">Overdue</span>
+                                    @else
+                                        <span class="badge bg-success">On Time</span>
+                                    @endif
                                 </div>
                                 <div class="mb-2">
                                     <span class="font-bold" style="color:#000 !important;">Assignment Status:</span>
