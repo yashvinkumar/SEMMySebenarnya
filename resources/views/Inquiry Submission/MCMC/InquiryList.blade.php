@@ -1,3 +1,4 @@
+
 @extends('layouts.dashboard')
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/dashboard-theme.css') }}">
@@ -229,6 +230,25 @@
                                         <div class="flex items-center">
                                             <i class="fas fa-exclamation-triangle mr-1"></i>
                                             <span class="text-orange-600">Not Assigned</span>
+                                        </div>
+                                    @endif
+                                    {{-- SLA: Due Date & Status --}}
+                                    @php
+                                        $latestAssignment = $inquiry->currentAssignment();
+                                        $dueDate = $latestAssignment ? $latestAssignment->due_date : null;
+                                        $slaStatus = $latestAssignment ? $latestAssignment->sla_status : null;
+                                    @endphp
+                                    @if ($latestAssignment)
+                                        <div class="flex items-center mt-1">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            <span class="text-gray-600">Due:
+                                                {{ $dueDate ? \Carbon\Carbon::parse($dueDate)->format('d/m/Y') : 'N/A' }}</span>
+                                            &nbsp;
+                                            @if ($slaStatus === 'Overdue')
+                                                <span class="badge bg-danger">Overdue</span>
+                                            @else
+                                                <span class="badge bg-success">On Time</span>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>

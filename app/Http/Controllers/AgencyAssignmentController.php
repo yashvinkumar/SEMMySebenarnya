@@ -283,11 +283,23 @@ class AgencyAssignmentController extends Controller
             ->groupBy('agency_ID')
             ->get();
 
+        // Get all assignments with SLA info for the detailed table
+        $assignments = InquiryAssignment::with([
+            'approval.inquiry.user',
+            'agency',
+            'assignedByStaff'
+        ])
+            ->whereDate('assignment_Date', '>=', $startDate)
+            ->whereDate('assignment_Date', '<=', $endDate)
+            ->orderBy('assignment_Date', 'desc')
+            ->get();
+
         return view('mcmc.assignments.reports', compact(
             'assignmentsByAgency',
             'assignmentsByStatus',
             'monthlyTrends',
             'responseTimeByAgency',
+            'assignments',
             'startDate',
             'endDate'
         ));

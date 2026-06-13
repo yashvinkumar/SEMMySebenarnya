@@ -61,7 +61,9 @@ class McmcSimpleInquiryController extends Controller
             return $inquiry;
         });
 
-        $agencies = Agency::orderBy('agency_Name')->get();
+        $agencies = Agency::withActiveAssignmentsCount()
+            ->orderBy('agency_Name')
+            ->get();
 
         // Define filter options
         $filters = [
@@ -139,8 +141,10 @@ class McmcSimpleInquiryController extends Controller
 
             $unassignedInquiries = $query->orderBy('inquiry_Created_At', 'desc')->paginate(15);
 
-            // Get all active agencies for assignment
-            $agencies = Agency::orderBy('agency_Name')->get();
+            // Get all active agencies for assignment with workload counts
+            $agencies = Agency::withActiveAssignmentsCount()
+                ->orderBy('agency_Name')
+                ->get();
 
             // Get already assigned inquiries for reference
             $assignedInquiries = InquirySubmissionRecord::with(['assignments.agency'])
